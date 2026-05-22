@@ -86,6 +86,16 @@ class Diretorio:
         
     @property
     def TamanhoTotal(self) -> int:
+        """
+        
+        Retorna o tamanho total do diretório, considerando suas eventuas subpastas.
+
+        Returns
+        -------
+        int
+            Tamanho do diretório em Bytes
+
+        """
         acc = self.TamanhoBase
         
         for filho in self.Filhos:
@@ -94,6 +104,15 @@ class Diretorio:
         return acc
     
     def toSeries(self) -> pd.Series:
+        """
+        Converte o diretório em uma representação do tipo pd.Series.
+
+        Returns
+        -------
+        s : TYPE
+            Representação do diretório.
+
+        """
         d = self.Diretorio.replace("\\","/")
         s = pd.Series({"TamanhoTotal": self.TamanhoTotal,
                         "TamanhoFormatado": self.TamanhoFormatado,
@@ -184,12 +203,9 @@ class DirectorySizeFetcher:
         
         filenames: list[str] = []
         
-        try:
-            for f in os.scandir(path):
-                if f.is_file():
-                    filenames.append(f)
-        except PermissionError:
-            pass
+        for f in self.scandir(path):
+            if ((f is not None) and (f.is_file())):
+                filenames.append(f)
         
         for filename in filenames:
             
@@ -197,24 +213,39 @@ class DirectorySizeFetcher:
             try:
                 if os.path.exists(filename) and os.path.isfile(filename):
                     tamanhoAcumuladoDosArquivosDoDiretorio += os.path.getsize(filename)
-            except PermissionError:
+            except (PermissionError, FileNotFoundError):
                 pass
                 
         return tamanhoAcumuladoDosArquivosDoDiretorio, len(filenames)
     
     def scandir(self, path: str):
+        """
+        Wrap do scandir do os.scandir.
+
+        Parameters
+        ----------
+        path : str
+            diretório a ser analisado
+
+        Returns
+        -------
+        resultado : TYPE
+            DESCRIPTION.
+        """
+        resultado = []
+        
         try:
-            return os.scandir(path)
-        except:
-            return []
+            resultado = os.scandir(path)
+        except (PermissionError, FileNotFoundError):
+            pass
+        
+        return resultado
     
     def __get(self, 
               path: str,
               diretorioParental: Union[Diretorio, None] = None,
               depth: int = 0) -> dict[str, Diretorio]:
-        """Calculates the total size of a directory and its subdirectories in bytes."""
-        
-        
+        """Calculate the total size of a directory and its subdirectories in bytes."""
         if self.MaxDepth > -1:
             if depth > self.MaxDepth:
                 return
@@ -236,6 +267,15 @@ class DirectorySizeFetcher:
     
     
     def get(self) -> Diretorio:
+        """
+        Retorna o resultado do diretório.
+
+        Returns
+        -------
+        Diretorio
+            DESCRIPTION.
+
+        """
         if (self._Result is None):
             self._Result = self.__get(self.BaseDirName)
         
@@ -244,7 +284,21 @@ class DirectorySizeFetcher:
 
 def apresentarArvore(diretorio: Diretorio,
                      exportarResultados: bool = True):
-    
+    """
+    Apresenta a árvore de diretórios.
+
+    Parameters
+    ----------
+    diretorio : Diretorio
+        DESCRIPTION.
+    exportarResultados : bool, optional
+        DESCRIPTION. The default is True.
+
+    Returns
+    -------
+    None.
+
+    """
     diretorio = diretorio.ordenarFilhos(lambda d: d.Diretorio)
     
     def apresentarFilhosDoDiretorio(diretorio: Diretorio,
@@ -283,6 +337,17 @@ def apresentarArvore(diretorio: Diretorio,
 
         
 def main() -> tuple[pd.Series, Diretorio]:
+    """
+    Executa a rotina.
+
+    Returns
+    -------
+    df : TYPE
+        DESCRIPTION.
+    diretorio : TYPE
+        DESCRIPTION.
+
+    """
     directory_path = filedialog.askdirectory(title="Selecione o diretório a ser analisado")
     
     print(f"Analisando: {directory_path}")
