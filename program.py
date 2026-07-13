@@ -4,14 +4,17 @@ Created on Fri Jul 25 10:28:08 2025
 
 @author: lealp
 """
+from datetime import datetime
 import os
 from dataclasses import dataclass, field
 from typing import Union
 import pandas as pd
 from tkinter import filedialog
+import tkinter
+from tkinter import ttk
 
 from diretorio import Diretorio
-from displayResultados.logging import log
+#from displayResultados.logging import log
 from displayResultados.htmlExporting import gerarhtml
 
 @dataclass
@@ -136,43 +139,119 @@ def main() -> tuple[pd.Series, Diretorio]:
         DESCRIPTION.
 
     """
+    t0 = datetime.now()
+    
+    class DiretoriosDoSoftware:
+        def __init__(self):
+            self.diretorioASerAnalisado = ""
+            self.diretorioDeSaida = ""
     
     
-    print("Pressione ENTER ou '1' para exportar o resultado da análise no formato HTML." + 
-                      "Qualquer outro valor para exportar um log no formato txt \n")
-    
-    logOrHtml = input()
-    
-    directory_path = filedialog.askdirectory(title="Selecione o diretório a ser analisado")
-    
-    directoryDeSaida = filedialog.askdirectory(title="Selecione o diretório de saída")
+    diretoriosDoSoftware = DiretoriosDoSoftware()
     
     
-    print(f"Analisando: {directory_path}")
-    
-    fetcher = DirectorySizeFetcher(directory_path, -1)
-    diretorio: Diretorio = fetcher.get()
-    # df = diretorio.toSeries()
-    
-    # Enter é uma string nula
-    
-    if logOrHtml == "" or int(logOrHtml) == 1:
-        htmlFileName = os.path.join(directoryDeSaida, f"log.html").replace("\\","/")
+    def obterDiretorioASerAnalisado(diretoriosDoSoftware: DiretoriosDoSoftware):
+        diretoriosDoSoftware.diretorioASerAnalisado = filedialog.askdirectory(title="Diretório a ser analisado")
+        print(diretoriosDoSoftware.diretorioASerAnalisado)
+
+    def obterDiretorioDeSaida(diretoriosDoSoftware: DiretoriosDoSoftware):
+        diretoriosDoSoftware.diretorioDeSaida = filedialog.askdirectory(title="Diretório de saída")
+        print(diretoriosDoSoftware.diretorioDeSaida)
+
+    def executar(diretoriosDoSoftware: DiretoriosDoSoftware):
+        
+        for widget in root.winfo_children():
+            widget.destroy()
+        
+        root.update()
+        
+        frm = ttk.Frame(root, padding=10)
+        frm.grid()
+        ttk.Label(frm, 
+                  text="Processando. Aguarde",
+                  font=("Arial", 20, "bold")).grid(column=0, row=0)
+        root.update()
+        
+        fetcher: DirectorySizeFetcher = DirectorySizeFetcher(diretoriosDoSoftware.diretorioASerAnalisado, -1)
+        
+        diretorio = fetcher.get()
+        
+        diretorio = diretorio.ordenarFilhos(lambda d: d.TamanhoTotal, 
+                                            True # sempre ordenar do maior arquivo para o menor.
+                                            )
+        
+        # if logOrHtml == "" or int(logOrHtml) == 1:
+        htmlFileName = os.path.join(diretoriosDoSoftware.diretorioDeSaida, "log.html").replace("\\","/")
         gerarhtml(diretorio, htmlFileName)
-    else:
-        logFileName = os.path.join(directoryDeSaida, f"log.txt").replace("\\","/")
-        log(diretorio, logFileName)
+        
+        for widget in root.winfo_children():
+            widget.destroy()
+        
+        tf = datetime.now()
+        dt = tf - t0
+        print(f"Tempo de corrido: {dt}")
+        
+        frm = ttk.Frame(root, padding=10)
+        frm.grid()
+        ttk.Label(frm, 
+                  font=("Arial", 14, "bold"),
+                  text="Programa concluído").grid(column=0, row=0)
+        
+        frm2 = ttk.Frame(root, padding=20)
+        frm2.grid()
+        text_box = tkinter.Text(frm2, wrap="word", height=3, width=40)
+        #text_box.pack(pady=10)
+        text_box.grid(column=0, row=0)
+        text_box.insert(tkinter.END, 
+                        f"Tempo decorrido: {dt} \n")
+        text_box.config(state="disabled")
+        # Lock the widget to make it read-only for users
+        
+        frm3 = ttk.Frame(root, padding=2)
+        frm3.grid()
+        ttk.Button(frm3, text="Encerrar", command=root.destroy).grid(column=0, row=0)
     
-    print(f"Resultado: {diretorio}")
+    
+    # start: Tkinter
+    root = tkinter.Tk()
+    # Pull to the front, then release global pinning
+    root.attributes('-topmost', True)
+    root.attributes('-topmost', False)
+    # Minimum width and height
+    root.minsize(30, 30)  
+    frm = ttk.Frame(root, padding=20)
+    frm.grid()
+    ttk.Label(frm, 
+              text="Diretório a ser analisado",
+              font=("Arial", 12, "bold")).grid(column=0, row=0)
+    
+    ttk.Button(frm, text="Selecione", 
+               command=lambda: obterDiretorioASerAnalisado(diretoriosDoSoftware)).grid(column=1, row=0)
+    
+    frm2 = ttk.Frame(root, padding=20)
+    frm2.grid()
+    ttk.Label(frm2, 
+              text="Diretório de saída",
+              font=("Arial", 12, "bold")).grid(column=0, row=0)
+    ttk.Button(frm2, text="Selecione", 
+               command=lambda: obterDiretorioDeSaida(diretoriosDoSoftware)).grid(column=1, row=0)
+    
+    frm3 = ttk.Frame(root, padding=20)
+    frm3.grid()
+    ttk.Button(frm3, text="Executar", 
+               command=lambda: executar(diretoriosDoSoftware)).grid(column=0, row=0)
+    
+    root.mainloop()
+    
+    # end: Tkinter
     
     
-    return diretorio
 
     
 if __name__ == "__main__":
         
     # Example usage:
-    diretorio = main()
+    main()
     
     
     

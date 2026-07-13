@@ -5,6 +5,7 @@ Created on Fri May 22 17:28:51 2026
 @author: lealp
 """
 
+import os
 import dominate
 from dominate.tags import *
 from pathlib import Path
@@ -79,8 +80,10 @@ def adicionardetails(diretorio: Diretorio, nivel: str = ""):
         with details():
             d = Path(diretorio.Diretorio).parts[-1]
             with summary():
-                span(f"{nivel} - {d} \t\t TAMANHO: {diretorio.TamanhoFormatado}",
+                span(f"{nivel} {d}: ",
                      style="font-weight: bold; font-size:1.2rem")
+                span(f"{diretorio.TamanhoFormatado}",
+                     style="font-weight: bold; font-size:1.2rem; margin-left: 50px;")
                 
             with div(_class="toggle-content"):
                 with ul():
