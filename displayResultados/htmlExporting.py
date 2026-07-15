@@ -7,14 +7,16 @@ Created on Fri May 22 17:28:51 2026
 
 import os
 import dominate
-from dominate.tags import *
+from dominate import tags
 from pathlib import Path
+
 from diretorio import Diretorio
+from corretorDeEncoding import removeCaracteresEspeciais
 
 def adicionarEstilo(doc):
     
     with doc.head:
-        style("""
+        tags.style("""
             body {
                     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
                     margin: 40px;
@@ -77,20 +79,36 @@ def adicionarEstilo(doc):
         """)
         
 def adicionardetails(diretorio: Diretorio, nivel: str = ""):
-        with details():
+        with tags.details():
             d = Path(diretorio.Diretorio).parts[-1]
-            with summary():
-                span(f"{nivel} {d}: ",
+            with tags.summary():
+                tags.span(f"{nivel} {d}: ",
                      style="font-weight: bold; font-size:1.2rem")
-                span(f"{diretorio.TamanhoFormatado}",
+                tags.span(f"{diretorio.TamanhoFormatado}",
                      style="font-weight: bold; font-size:1.2rem; margin-left: 50px;")
-                
-            with div(_class="toggle-content"):
-                with ul():
-                    li(f"Path: {diretorio.Diretorio}")
-                    li(f"TAMANHO: {diretorio.TamanhoFormatado}")
-                    li(f"N° ARQUIVOS: {diretorio.TotalDeArquivos}")
-                    li(f"N° de SUBPASTAS: {len(diretorio.Filhos)}")
+            
+            with tags.div(_class="toggle-content"):
+                with tags.ul():
+                    try:
+                        caminhoDoDiretorio = f"Path: {diretorio.Diretorio}"
+                        tags.li(caminhoDoDiretorio)
+                    except UnicodeEncodeError:
+                        caminhoDoDiretorio = f"Path: {diretorio.Diretorio}"
+                        
+                        caminhoDoDiretorio = caminhoDoDiretorio.replace("\\", "/")
+                        caminhoDoDiretorio = removeCaracteresEspeciais(caminhoDoDiretorio)
+                        
+                        try:
+                            caminhoDoDiretorio = f"Path: {diretorio.Diretorio}".encode('utf-8')
+                            tags.li(caminhoDoDiretorio)
+                        except UnicodeEncodeError:
+                            if caminhoDoDiretorio is None:
+                                caminhoDoDiretorio = "Diretorio nao mapeado. Erro de mapeamento"
+                                tags.li(caminhoDoDiretorio)
+                    
+                    tags.li(f"TAMANHO: {diretorio.TamanhoFormatado}")
+                    tags.li(f"Total de ARQUIVOS: {diretorio.TotalDeArquivos}")
+                    tags.li(f"Total de SUBPASTAS: {len(diretorio.Filhos)}")
                         
                 if diretorio.Filhos is not None and any(diretorio.Filhos):
                     nivel = nivel + "."
@@ -101,16 +119,16 @@ def adicionardetails(diretorio: Diretorio, nivel: str = ""):
 
 def gerarhtml(diretorio: Diretorio, htmlFileName: str):
         
-    doc = dominate.document(title='Log de da análise do diretório')
+    doc = dominate.document(title='Log Tree')
     
     adicionarEstilo(doc)
     
     with doc:
-        with div(id='content') as content:
+        with tags.div(id='content'):
             adicionardetails(diretorio, "1")
     
     if os.path.exists(htmlFileName):
         os.remove(htmlFileName)
     
-    with open(htmlFileName, 'w') as f:
+    with open(htmlFileName, 'w', encoding="utf-8") as f:
         f.write(doc.render())
